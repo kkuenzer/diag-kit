@@ -1,0 +1,244 @@
+#!/bin/bash
+# Network Diagnostic Report Script - Enhanced for Field Use
+# Save as: ~/network-report.sh
+#
+# Workflow: double-click on the Pi's desktop, an HTML report appears on
+# the Desktop, open it in chromium on the touchscreen and walk the customer
+# through it.
+#
+# Output structure (top to bottom):
+#   1. Header (network name, date, device)
+#   2. At-a-Glance summary card (the headline numbers)
+#   3. Raw diagnostic sections (the engineering drill-down)
+#   4. Footer
+
+DESKTOP_DIR="$HOME/Desktop"
+mkdir -p "$DESKTOP_DIR"
+
+# === 1. Network Name Detection ===
+# Use modern `iw` rather than deprecated `iwgetid`. Fall back to default route
+# interface, then to a static "unknown" label. We use absolute paths because
+# /sbin and /usr/sbin aren't in the user's PATH by default on Pi OS.
+NET_NAME="unknown_network"
+if [ -x /usr/sbin/iw ]; then
+  NET_NAME=$(sudo /usr/sbin/iw dev wlan0 link 2>/dev/null | awk -F': ' '/SSID/ {print $2; exit}')
+fi
+if [ -z "$NET_NAME" ] && [ -x /usr/sbin/iwgetid ]; then
+  NET_NAME=$(sudo /usr/sbin/iwgetid -r 2>/dev/null)
+fi
+if [ -z "$NET_NAME" ]; then
+  NET_NAME=$(ip route show default 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+fi
+[ -z "$NET_NAME" ] && NET_NAME="unknown_network"
+
+SAFE_NAME=$(echo "$NET_NAME" | sed 's/[^a-zA-Z0-9_-]/_/g')
+TIMESTAMP=$(date +"%Y%m%d-%H%M")
+REPORT_FILE="$DESKTOP_DIR/${SAFE_NAME}_report_${TIMESTAMP}.html"
+
+echo "Generating report: $REPORT_FILE"
+
+# === 2. HTML Header (with summary card placeholder) ===
+# The summary card is written as a placeholder now; we fill in the values
+# at the end (after the diagnostics have run) using a sed pass.
+SUMMARY_PLACEHOLDER="<!--SUMMARY-CARD-PLACEHOLDER-->"
+cat <<EOF > "$REPORT_FILE"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Network Report: $NET_NAME</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; padding: 20px; background: #fafafa; color: #212121; }
+        h1 { color: #1a365d; border-bottom: 3px solid #1a365d; padding-bottom: 10px; }
+        h2 { color: #2c5282; margin-top: 0; border-bottom: 1px solid #e8eaf6; padding-bottom: 8px; }
+        .section { background: #ffffff; border: 1px solid #e0e0e0; padding: 18px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-card { background: #ffffff; border: 1px solid #e0e0e0; padding: 16px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .summary-card .label { font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em; color: #616161; font-weight: 600; margin: 0 0 8px 0; }
+        .summary-card .value { font-size: 2em; font-weight: 700; line-height: 1.1; }
+        .summary-card .unit { font-size: 0.5em; font-weight: 500; color: #616161; margin-left: 4px; }
+        .summary-card .green { color: #2e7d32; }
+        .summary-card .yellow { color: #f9a825; }
+        .summary-card .red { color: #c62828; }
+        .summary-card .gray { color: #757575; }
+        pre { background: #1a202c; color: #e2e8f0; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 14px; }
+        .meta { color: #616161; font-size: 15px; margin-bottom: 25px; }
+        .highlight { background: #ebf8ff; border-left: 5px solid #3182ce; padding: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        @media print { body { background: white; } .section, .summary-card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; } }
+    </style>
+</head>
+<body>
+    <h1>Network Diagnostic Report</h1>
+    <div class="meta">
+        <strong>Network:</strong> $NET_NAME <br>
+        <strong>Generated:</strong> $(date) <br>
+        <strong>Device:</strong> $(hostname) — Raspberry Pi Troubleshooter
+    </div>
+    $SUMMARY_PLACEHOLDER
+EOF
+
+# === 3. Helper ===
+# Captures the output of each diagnostic and saves it to a side file
+# (so the summary card at the TOP can parse headline values).
+HEADLINE=$(mktemp -d)
+trap "rm -rf $HEADLINE" EXIT
+
+run_diag() {
+    local title="$1"
+    local cmd="$2"
+    local extra_class="$3"
+    echo "Running: $title..."
+    echo "<div class='section $extra_class'><h2>$title</h2><pre>" >> "$REPORT_FILE"
+    local out
+    out=$(eval "$cmd" 2>&1)
+    local rc=$?
+    [ $rc -ne 0 ] && out="${out}
+[exit code $rc]"
+    echo "$out" >> "$REPORT_FILE"
+    echo "</pre></div>" >> "$REPORT_FILE"
+    # save raw output to a side file (sanitize the title for use as a filename)
+    local safe_title
+    safe_title=$(echo "$title" | tr ' /' '__')
+    echo "$out" > "$HEADLINE/$safe_title"
+}
+
+# === 4. Diagnostics (raw sections) ===
+# Order matters for the summary card at the top: speed, ping, devices, gateway.
+run_diag "Internet Speed Test" "speedtest-cli --simple" "highlight"
+run_diag "IP Interfaces & Addresses" "ip -br address show"
+run_diag "Routing Table" "ip route"
+run_diag "DNS Configuration" "cat /etc/resolv.conf"
+run_diag "Wi-Fi Link (if applicable)" "sudo /usr/sbin/iw dev wlan0 link 2>/dev/null || /usr/sbin/iwconfig 2>/dev/null || echo 'No wireless interface found'"
+run_diag "Local Gateway Ping" "GW_IP=\$(ip route | awk '/default/ {print \$3; exit}'); ping -c 5 \$GW_IP"
+run_diag "External Ping (1.1.1.1)" "ping -c 5 1.1.1.1"
+run_diag "DNS Resolution" "host google.com 2>/dev/null || nslookup google.com 2>/dev/null || dig +short google.com"
+run_diag "Traceroute / MTR" "mtr -c 10 --report 1.1.1.1"
+run_diag "Local Network Scan (ping sweep)" "SUBNET=\$(ip -o route get 8.8.8.8 2>/dev/null | awk '{print \$7}' | cut -d. -f1-3).0/24; [ -z \"\$SUBNET\" ] || [ \"\$SUBNET\" = \".0/24\" ] && SUBNET=\$(ip route | awk '/default/ {print \$3; exit}' | cut -d. -f1-3).0/24; sudo nmap -sn -T4 \$SUBNET 2>/dev/null || nmap -sn -T4 \$SUBNET 2>/dev/null || echo 'Scan skipped'"
+run_diag "Local Network Scan (Top Ports)" "SUBNET=\$(ip route | awk '/default/ {print \$3; exit}' | cut -d. -f1-3).0/24; sudo nmap -F \$SUBNET 2>/dev/null || nmap -F \$SUBNET 2>/dev/null || echo 'Scan skipped'"
+
+# === 5. Build the At-a-Glance summary card from the saved side files ===
+# (All the parsing happens here, in memory, then we inject the card at the
+# top of the report by replacing the placeholder.)
+parse_speed_down() { awk -F': *' '/^Download:/ {gsub(/[^0-9.]/, "", $2); v=$2+0; printf "%.2f", v; exit}' "$1" 2>/dev/null; }
+parse_speed_up()   { awk -F': *' '/^Upload:/   {gsub(/[^0-9.]/, "", $2); v=$2+0; printf "%.2f", v; exit}' "$1" 2>/dev/null; }
+parse_ping_ms()    { awk -F': *' '/^Ping:/     {gsub(/[^0-9.]/, "", $2); v=$2+0; printf "%d", v+0.5; exit}' "$1" 2>/dev/null; }
+parse_devices()    { grep -cE 'Nmap scan report for ' "$1" 2>/dev/null; }
+parse_gateway_ip() { awk '/default/ {print $3; exit}' "$1" 2>/dev/null; }
+parse_dns_servers() { awk '/^nameserver/ {print $2}' "$1" 2>/dev/null | head -2 | xargs; }
+
+SPEED_DOWN=$(parse_speed_down "$HEADLINE/Internet_Speed_Test")
+SPEED_UP=$(parse_speed_up "$HEADLINE/Internet_Speed_Test")
+PING=$(parse_ping_ms "$HEADLINE/Internet_Speed_Test")
+DEVICES=$(parse_devices "$HEADLINE/Local_Network_Scan_(ping_sweep)")
+GATEWAY_IP=$(parse_gateway_ip "$HEADLINE/Routing_Table")
+DNS_SERVERS=$(parse_dns_servers "$HEADLINE/DNS_Configuration")
+
+[ -z "$SPEED_DOWN" ] && SPEED_DOWN="—"
+[ -z "$SPEED_UP" ]   && SPEED_UP="—"
+[ -z "$PING" ]       && PING="—"
+[ -z "$DEVICES" ]    && DEVICES="—"
+[ -z "$GATEWAY_IP" ] && GATEWAY_IP="—"
+[ -z "$DNS_SERVERS" ] && DNS_SERVERS="—"
+
+# Build the summary card in a temp file
+# Color-code each metric using the same thresholds as report.py:
+#   green = healthy, yellow = warning, red = bad, gray = unknown
+#   Speed: green >=50, yellow 10-50, red <10
+#   Ping:  green <=50, yellow 50-100, red >100
+#   Devices: green <=15, yellow 15-30, red >30
+color_for_speed() {
+  local v="$1"
+  [ -z "$v" ] || [ "$v" = "—" ] && { echo "gray"; return; }
+  local n=$(echo "$v" | awk '{print int($1)}')
+  if [ "$n" -ge 50 ]; then echo "green"
+  elif [ "$n" -ge 10 ]; then echo "yellow"
+  else echo "red"
+  fi
+}
+color_for_ping() {
+  local v="$1"
+  [ -z "$v" ] || [ "$v" = "—" ] && { echo "gray"; return; }
+  local n=$(echo "$v" | awk '{print int($1)}')
+  if [ "$n" -le 50 ]; then echo "green"
+  elif [ "$n" -le 100 ]; then echo "yellow"
+  else echo "red"
+  fi
+}
+color_for_devices() {
+  local v="$1"
+  [ -z "$v" ] || [ "$v" = "—" ] && { echo "gray"; return; }
+  local n=$(echo "$v" | awk '{print int($1)}')
+  if [ "$n" -le 15 ]; then echo "green"
+  elif [ "$n" -le 30 ]; then echo "yellow"
+  else echo "red"
+  fi
+}
+
+DOWN_CLASS=$(color_for_speed "$SPEED_DOWN")
+UP_CLASS=$(color_for_speed "$SPEED_UP")
+PING_CLASS=$(color_for_ping "$PING")
+DEV_CLASS=$(color_for_devices "$DEVICES")
+# gateway and DNS don't have a meaningful "good/bad" — keep them gray
+GW_CLASS="gray"
+DNS_CLASS="gray"
+
+SUMMARY_CARD=$(mktemp)
+cat <<EOF > "$SUMMARY_CARD"
+<div class="summary">
+    <div class="summary-card">
+        <div class="label">Download</div>
+        <div class="value ${DOWN_CLASS}">${SPEED_DOWN}<span class="unit">Mbps</span></div>
+    </div>
+    <div class="summary-card">
+        <div class="label">Upload</div>
+        <div class="value ${UP_CLASS}">${SPEED_UP}<span class="unit">Mbps</span></div>
+    </div>
+    <div class="summary-card">
+        <div class="label">Latency</div>
+        <div class="value ${PING_CLASS}">${PING}<span class="unit">ms</span></div>
+    </div>
+    <div class="summary-card">
+        <div class="label">Devices on LAN</div>
+        <div class="value ${DEV_CLASS}">${DEVICES}</div>
+    </div>
+    <div class="summary-card">
+        <div class="label">Gateway</div>
+        <div class="value ${GW_CLASS}" style="font-size: 1.2em; word-break: break-all;">${GATEWAY_IP}</div>
+    </div>
+    <div class="summary-card">
+        <div class="label">DNS</div>
+        <div class="value ${DNS_CLASS}" style="font-size: 1em; word-break: break-all;">${DNS_SERVERS}</div>
+    </div>
+</div>
+EOF
+
+# Inject the summary card at the top of the report (replace placeholder)
+# Use python to do the substitution safely (handles special chars in values).
+REPORT_FILE="$REPORT_FILE" SUMMARY_CARD="$SUMMARY_CARD" python3 - <<'PYEOF'
+import os
+report = os.environ['REPORT_FILE']
+card   = os.environ['SUMMARY_CARD']
+with open(report) as f:    html = f.read()
+with open(card) as f:      new_card = f.read()
+html = html.replace('<!--SUMMARY-CARD-PLACEHOLDER-->', new_card)
+with open(report, 'w') as f: f.write(html)
+print(f"injected summary card at the top of {report}")
+PYEOF
+rm -f "$SUMMARY_CARD"
+
+# === 6. Footer ===
+cat <<EOF >> "$REPORT_FILE"
+    <div class="section">
+        <h2>Report Complete</h2>
+        <p><strong>Tip:</strong> Open this file on any device for easy sharing with clients.</p>
+        <p style="color: #718096; font-size: 0.9em;">Generated by <code>~/tools/network-report.sh</code> on $(hostname) at $(date).</p>
+    </div>
+</body>
+</html>
+EOF
+
+echo "✅ Report saved to: $REPORT_FILE"
+echo "   Open with: chromium $REPORT_FILE"

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Field Network Report
+Comment=Quick tech-facing diagnostic (raw output + At-a-Glance card)
+Exec=/home/administrator/tools/run-field-report.sh
+Icon=network-workgroup
+Terminal=false
+Type=Application
+Categories=Utility;Network;
+StartupNotify=false
+Keywords=network;diagnostic;report;wifi;

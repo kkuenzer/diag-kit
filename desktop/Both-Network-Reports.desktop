@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Both Network Reports
+Comment=Run diagnostic once, build field + customer reports, open both side-by-side
+Exec=/home/administrator/tools/run-both-reports.sh
+Icon=network-transmit-receive
+Terminal=false
+Type=Application
+Categories=Utility;Network;
+StartupNotify=false
+Keywords=network;diagnostic;report;both;
