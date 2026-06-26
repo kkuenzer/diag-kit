@@ -4,6 +4,9 @@
 # Includes checks for personal information, customer information, and system-specific terms
 
 # Configuration - Add or remove terms that should be checked for
+# To add new customers, simply add their names to the CUSTOMER_INFO_TERMS variable
+# Separate multiple terms with the | character
+# Example: CUSTOMER_INFO_TERMS="customer_name|customer_company|customer_email|Dutchman Manufacturing|Alden Library|Platte Township|New Customer Name"
 PERSONAL_ASSISTANT_NAMES="moth|Moth|personal_assistant_name"
 SPECIFIC_SYSTEM_NAMES="openclaw|OpenClaw|specific_system_name"
 PERSONAL_INFO_TERMS="kkuenzer|administrator|kyle|Kyle"
