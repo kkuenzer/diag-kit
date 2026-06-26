@@ -3,7 +3,7 @@
 # field-tech and customer reports, opens both in chromium (two tabs).
 set -e
 
-# Use the symlink path (e.g. /home/administrator/tools/run-both-reports.sh)
+# Use the symlink path (e.g. ~/tools/run-both-reports.sh)
 # so we end up in the right directory even though the real file is in
 # /opt/diag-kit/scripts/.
 DESKTOP_DIR="$HOME/Desktop"

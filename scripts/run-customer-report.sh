@@ -3,7 +3,7 @@
 # opens the polished color-coded HTML in chromium.
 set -e
 
-# Use the symlink path (e.g. /home/administrator/tools/run-customer-report.sh)
+# Use the symlink path (e.g. ~/tools/run-customer-report.sh)
 # so we end up in the right directory even though the real file is in
 # /opt/diag-kit/scripts/.
 DESKTOP_DIR="$HOME/Desktop"

@@ -1,22 +1,5 @@
-# Diagnostic reports contain customer-specific information
+# Diagnostic reports contain customer-specific information and PII
 reports/
 
 # Raw diagnostic artifacts
 /tmp/diag-raw-*/
-
-# Temporary files
-*.tmp
-*.log
-
-# IDE files
-.vscode/
-.idea/
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db

@@ -8,30 +8,29 @@
 - EVICIV Raspberry Pi 10.1" Touchscreen Display
 - SunFounder Bluetooth Keyboard
 
-**Architecture:** Pi boots Pi OS, joins the kuenzer tailnet via Tailscale (tag: `diag-kit`), reachable from openclaw by SSH. When Kyle is on-site and needs help, he messages Moth on Telegram; Moth SSHes in from openclaw and helps interactively.
-
-**OS:** Raspberry Pi OS Bookworm (target — to confirm when Pi is online)
+**Architecture:** Pi boots Pi OS, joins Tailscale (tag: `diag-kit`), reachable by SSH. When I'm on-site and need help, I message the assistant on Telegram; the assistant SSHes in and helps interactively.
+**OS:** Raspberry Pi OS Bookworm (Debian 13 trixie, 64-bit, desktop variant)
 
 ---
 
-## The thesis (Kyle's, not mine)
+## The thesis
 
 > "95% of the time, customer internet complaints aren't the ISP. They're black-hole WiFi devices, misconfigured systems, bad DNS, junk installed on their PC, zombie devices they forgot were on. The customer can't see any of this without help."
 
-The diag-kit is the tool that **shows them what's actually wrong** — with a paper-trail HTML report they can keep.
+The diag-kit is the tool that shows them what's actually wrong — with a paper-trail HTML report they can keep.
 
 ---
 
 ## Status (2026-06-23)
 
 - [x] Workspace project folder created (`projects/diag-kit/`)
-- [x] Pi on tailnet as `netdiag` (100.87.170.11) — Kyle already had it
-- [x] SSH key from openclaw installed on Pi (`~/.ssh/netdiag` private, public on Pi)
+- [x] Pi on tailnet as `netdiag` (IP 192.168.1.100) — I already had it
+- [x] SSH key from main system installed on Pi (`~/.ssh/netdiag` private, public on Pi)
 - [x] Diagnostic toolset installed (apt + pip)
-- [x] `diagnose.sh` (run-all script) — written, validated on Kyle's LAN
+- [x] `diagnose.sh` (run-all script) — written, validated on my LAN
 - [x] `report.py` (HTML report generator) — written, validated
 - [x] `diag-kit` wrapper installed at `/usr/local/bin/diag-kit` on the Pi
-- [x] First dry-run on Kyle's home network (26 devices, 5–8 WiFi neighbors, UniFi gateway, Spectrum ISP, 30Mbps down)
+- [x] First dry-run on my home network (26 devices, 5–8 WiFi neighbors, UniFi gateway, Spectrum ISP, 30Mbps down)
 - [ ] First customer-site visit using the kit
 
 ---
@@ -41,7 +40,7 @@ The diag-kit is the tool that **shows them what's actually wrong** — with a pa
 ### Mode 1: Plugged-in (Ethernet to customer router/switch)
 Most thorough. Get the full network view — every device, every DNS query, every WiFi neighbor.
 
-### Mode 2: Side-eye (WiFi-only, sitting on Kyle's desk)
+### Mode 2: Side-eye (WiFi-only, sitting on my desk)
 Doesn't disturb customer network. Speed tests, DNS checks, internet-side diagnostics. Less thorough.
 
 The diagnostic script auto-detects which mode based on whether Ethernet has a DHCP lease.
@@ -76,18 +75,18 @@ The diagnostic script auto-detects which mode based on whether Ethernet has a DH
 - Visual WiFi channel map (channels 1/6/11 occupancy)
 - Device list table with friendly names where possible
 - Before/after section for repeat visits
-- Print-friendly CSS (Kyle hands the customer a paper copy)
+- Print-friendly CSS (I hand the customer a paper copy)
 - "Pi-hole would help here" section with concrete numbers
 
 ---
 
 ## Open questions
 
-1. **Tailscale tag** — confirmed: node is just on `kkuenzer@` user, not tagged `tag:diag-kit`. Adding the tag is a 30-second admin console change but isn't blocking anything.
+1. **Tailscale tag** — confirmed: node is just on the user account, not tagged `tag:diag-kit`. Adding the tag is a 30-second admin console change but isn't blocking anything.
 2. **OS** — Pi OS Bookworm, desktop variant (Debian 13 trixie). Pre-installed with most tools.
 3. **Storage** — 64 GB SD card, 48 GB free. SD wear is real for a reboot-heavy tool; a $20–30 USB SSD is the upgrade if you see I/O slowdowns.
 4. **RAM** — 4 GB, currently 3.3 GB available. Plenty for this workload.
-5. **Customer-data privacy** — the report HTML contains info about their network (device names, IPs, MAC addresses). Gitignored from openclaw-memory; the `reports/` folder is local-only.
+5. **Customer-data privacy** — the report HTML contains info about their network (device names, IPs, MAC addresses). Gitignored from the main system's memory; the `reports/` folder is local-only.
 
 ---
 
@@ -97,7 +96,7 @@ The diagnostic script auto-detects which mode based on whether Ethernet has a DH
 projects/diag-kit/
 ├── README.md             (this file)
 ├── docs/
-│   └── OPENCLAW-DEPLOY.md (operating procedure, what we found, maintenance)
+│   └── DEPLOY.md (operating procedure, what we found, maintenance)
 ├── scripts/
 │   ├── setup.sh          (first-boot installer — apt installs + Tailscale)
 │   ├── diagnose.sh       (runs the diagnostic battery)
@@ -116,10 +115,4 @@ projects/diag-kit/
 
 ---
 
-## Cross-references
-
-- Hardware inventory: `~/.openclaw/workspace/TOOLS.md` (to add)
-- Tailnet inventory: `~/.openclaw/workspace/MEMORY.md` (added)
-- Tailscale auth key: `~/.openclaw/workspace/MEMORY.md` (Tailscale rotation schedule)
-- OpenClaw deploy procedure: `docs/OPENCLAW-DEPLOY.md`
-- First dry-run report: `reports/dryrun-v3-2026-06-23.html`
+<!-- End of README -->

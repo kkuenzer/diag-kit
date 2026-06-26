@@ -1,19 +1,19 @@
-# diag-kit / OPENCLAW-DEPLOY.md
+# diag-kit / DEPLOY.md
 
-How to deploy, maintain, and use the network diagnostic kit from openclaw.
+How to deploy, maintain, and use the network diagnostic kit.
 
 ---
 
 ## Current state (2026-06-23)
 
 **Hardware on hand:**
-- Raspberry Pi 4B (hostname `NetDiag`, Tailscale `netdiag`, IP `100.87.170.11`)
-- EVICIV 10.1" touchscreen (working, /dev/input/event0-5)
+- Raspberry Pi 4B (hostname `NetDiag`, Tailscale `netdiag`, IP `192.168.1.100`)
+- EVICIV Raspberry Pi 10.1" Touchscreen Display (working, /dev/input/event0-5)
 - SunFounder Bluetooth keyboard (working, paired)
 
-**OS:** Raspberry Pi OS Bookworm (Debian 13 trixie), 64-bit, desktop variant.
-**User:** `administrator` (uid 1000), in `sudo` group with NOPASSWD.
-**Tailscale:** on the kuenzer tailnet as `netdiag`, direct connection to openclaw.
+**OS:** Raspberry Pi OS Bookworm (Debian 13 trixie), 64-bit, desktop variant — **CONFIRMED ONLINE**
+**User:** Standard user account (uid 1000), in `sudo` group with NOPASSWD.
+**Tailscale:** on the tailnet as `netdiag`, direct connection to the main system.
 
 **What I had to install (already done):**
 - wavemon, arp-scan, jq, dnsutils, traceroute, ngrep, ethtool, python3-jinja2
@@ -26,19 +26,19 @@ How to deploy, maintain, and use the network diagnostic kit from openclaw.
 - `/opt/diag-kit/report.py` — HTML report generator
 - `/usr/local/bin/diag-kit` — wrapper
 
-**Tailscale auth:** I generated a fresh key on openclaw and pasted the public half
-into the Pi's `~/.ssh/authorized_keys` (the Pi is `administrator@`, not `kyle@`).
-The matching private key is on openclaw at `~/.ssh/netdiag`.
+**Tailscale auth:** I generated a fresh key on the main system and pasted the public half
+into the Pi's `~/.ssh/authorized_keys` (the Pi is on the standard user account, not a specific named user).
+The matching private key is on the main system at `~/.ssh/netdiag`.
 
 ---
 
-## Operating procedure (Kyle on a customer site)
+## Operating procedure (On a customer site)
 
 ### Before leaving home
 1. Make sure the Pi is charged (or plugged in)
 2. Make sure the touchscreen is connected
 3. Make sure the BT keyboard is paired
-4. Make sure Tailscale is on (status: `tailscale status` from openclaw shows `netdiag`)
+4. Make sure Tailscale is on (status: `tailscale status` from the main system shows `netdiag`)
 
 ### On-site
 1. Power on the Pi. Log in as `administrator` (or have it auto-login)
@@ -68,18 +68,18 @@ The script auto-detects which interface is the default route and uses that.
 
 ---
 
-## Operating procedure (Moth on openclaw, helping remotely)
+## Operating procedure (Assistant helping remotely)
 
-If Kyle is on a customer site and stuck, he messages me on Telegram. I:
+If I'm on a customer site and stuck, I message the assistant on Telegram. The assistant:
 
 1. Verify the Pi is reachable: `tailscale status | grep netdiag`
-2. SSH in: `ssh -i ~/.ssh/netdiag administrator@100.87.170.11`
-3. Run interactive commands alongside him, e.g.:
+2. SSH in: `ssh -i ~/.ssh/netdiag user@192.168.1.100`
+3. Run interactive commands alongside me, e.g.:
    - `diag-kit diagnose --quick` to see what's happening live
    - `tail -f /tmp/diag-output.json` to see results as they come in
    - `nmap -Pn -p- 192.168.X.Y` for a deeper port scan
    - `tcpdump -i eth0 -nn` for live packet capture
-4. Pull the report back: `scp administrator@100.87.170.11:/tmp/diag-report.html /tmp/`
+4. Pull the report back: `scp user@192.168.1.100:/tmp/diag-report.html /tmp/`
 5. View it in a browser: `xdg-open /tmp/diag-report.html` (or send it via Telegram)
 
 The `~/.ssh/netdiag` private key is the auth path. Public half is on the Pi.
@@ -89,8 +89,8 @@ The `~/.ssh/netdiag` private key is the auth path. Public half is on the Pi.
 ## Tailscale auth (when to rotate)
 
 **Auth key on the Pi:** in `/etc/diag-kit.env` (mode 0600, owner root) — but actually
-we're not using an auth key here; the Pi was already on the tailnet from when Kyle
-set it up. The SSH keypair I generated (openclaw↔netdiag) is independent of Tailscale.
+we're not using an auth key here; the Pi was already on the tailnet from when I
+set it up. The SSH keypair I generated (main system↔netdiag) is independent of Tailscale.
 
 **When to rotate:**
 - The Tailscale auth key on the Pi expires 90 days from issue. Check the Tailscale
@@ -99,7 +99,7 @@ set it up. The SSH keypair I generated (openclaw↔netdiag) is independent of Ta
 
 ---
 
-## What we found on Kyle's home network (dry run, 2026-06-23)
+## What we found on my home network (dry run, 2026-06-23)
 
 This is the first baseline. The script caught several real things:
 
@@ -127,14 +127,14 @@ in their home/office.
 ### Updating the scripts
 
 The scripts live in two places:
-- **Workspace (source of truth):** `~/.openclaw/workspace/projects/diag-kit/scripts/`
+- **Workspace (source of truth):** `~/projects/diag-kit/scripts/`
 - **Pi (running copies):** `/opt/diag-kit/`
 
 To update the Pi after editing the workspace:
 ```bash
-# on openclaw
-scp ~/.openclaw/workspace/projects/diag-kit/scripts/diagnose.sh administrator@100.87.170.11:/tmp/
-scp ~/.openclaw/workspace/projects/diag-kit/scripts/report.py administrator@100.87.170.11:/tmp/
+# on the main system
+scp ~/projects/diag-kit/scripts/diagnose.sh user@192.168.1.100:/tmp/
+scp ~/projects/diag-kit/scripts/report.py user@192.168.1.100:/tmp/
 
 # on the Pi (via SSH)
 sudo cp /tmp/diagnose.sh /opt/diag-kit/diagnose.sh

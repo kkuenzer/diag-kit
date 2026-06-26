@@ -106,10 +106,10 @@ Hostname:     $(hostname)
 Tailscale IP: $TS_IP
 Tag:          tag:diag-kit
 
-From openclaw, you should now be able to:
-  ssh kyle@$TS_IP
+From the main system, you should now be able to:
+  ssh user@$TS_IP
 or:
-  ssh kyle@diag-kit
+  ssh user@diag-kit
 
 Next steps:
   1. Run a test scan on your own LAN:
@@ -120,9 +120,9 @@ Next steps:
      chromium /tmp/test-report.html
   4. When ready, take to a customer site.
 
-The kit is reachable from openclaw at any time via SSH.
-If Kyle gets stuck on a customer site, message Moth on Telegram
-and Moth can SSH in and help.
+The kit is reachable from the main system at any time via SSH.
+If I get stuck on a customer site, message the assistant on Telegram
+and the assistant can SSH in and help.
 
 ============================================
 
