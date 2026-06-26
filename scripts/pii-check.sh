@@ -1,11 +1,13 @@
 #!/bin/bash
 # Comprehensive PII Detection Script
 # Run this script in any repository before making it public to check for common PII patterns
+# Includes checks for personal information, customer information, and system-specific terms
 
 # Configuration - Add or remove terms that should be checked for
 PERSONAL_ASSISTANT_NAMES="moth|Moth|personal_assistant_name"
 SPECIFIC_SYSTEM_NAMES="openclaw|OpenClaw|specific_system_name"
 PERSONAL_INFO_TERMS="kkuenzer|administrator|kyle|Kyle"
+CUSTOMER_INFO_TERMS="customer_name|customer_company|customer_email|Dutchman Manufacturing|Alden Library|Platte Township"
 
 echo "🔍 Comprehensive PII Detection Scan Started"
 echo "======================================="
@@ -30,6 +32,10 @@ grep -r -i "$PERSONAL_ASSISTANT_NAMES\|$SPECIFIC_SYSTEM_NAMES" . --exclude-dir=.
 echo ""
 echo "👥 Checking for personal information..."
 grep -r -i "$PERSONAL_INFO_TERMS" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null
+
+echo ""
+echo "🏢 Checking for customer information..."
+grep -r -i "$CUSTOMER_INFO_TERMS" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null
 
 echo ""
 echo "🔑 Checking for potential credentials..."
