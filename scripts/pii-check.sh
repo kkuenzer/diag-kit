@@ -11,6 +11,7 @@ PERSONAL_ASSISTANT_NAMES="moth|Moth|personal_assistant_name"
 SPECIFIC_SYSTEM_NAMES="openclaw|OpenClaw|specific_system_name"
 PERSONAL_INFO_TERMS="kkuenzer|administrator|kyle|Kyle"
 CUSTOMER_INFO_TERMS="customer_name|customer_company|customer_email|Dutchman Manufacturing|Alden Library|Platte Township"
+NETWORK_SERVICE_KEYS="tskey-|AKIA|AIza|ya29|Bearer|Authorization:"
 
 echo "🔍 Comprehensive PII Detection Scan Started"
 echo "======================================="
@@ -41,7 +42,12 @@ echo "🏢 Checking for customer information..."
 grep -r -i "$CUSTOMER_INFO_TERMS" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null
 
 echo ""
+echo "🔐 Checking for network service keys..."
+grep -r -i "$NETWORK_SERVICE_KEYS" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null
+
+echo ""
 echo "🔑 Checking for potential credentials..."
+echo "   (This checks for common credential patterns but may produce false positives)"
 grep -r -i "password\|passwd\|pwd\|secret\|token\|key.*=.*[a-zA-Z0-9]" . --exclude-dir=.git --exclude-dir=node_modules --exclude="*.svg" --exclude="*.ico" --exclude="*.png" --exclude="*.jpg" --exclude="*.jpeg" --exclude="*.gif" 2>/dev/null
 
 echo ""
@@ -53,4 +59,4 @@ echo "✅ Comprehensive PII Detection Scan Complete"
 echo "=========================================="
 echo "⚠️  Review the output above for any potential PII that should be removed"
 echo "💡 Remember to also check .git history for sensitive information"
-echo "📝 Update the configuration variables at the top of this script for your specific terms to check"
+echo "📝 Update the configuration variables at the top of this script for your specific terms to check"echo "🔐 Remember to check for network service keys like Tailscale auth keys, AWS keys, etc."
